@@ -46,6 +46,21 @@ tr:nth-child(even) td { background-color: var(--light); }
 .footer { background-color: var(--dark); color: var(--white); text-align: center; padding: 26px 16px; }
 .footer p { margin: 6px 0; }
 
+.main-content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+body {
+  overflow-x: hidden;
+  text-align: left;
+}
 .search-control {
   display: grid;
   gap: 10px;
