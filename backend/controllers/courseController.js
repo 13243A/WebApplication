@@ -33,17 +33,25 @@ export async function getCourseById(req, res) {
 
 // POST /api/courses
 export async function createCourse(req, res) {
-    const [exist] = await pool.query("SELECT id FROM courses WHERE code = ?", [code]);
-if (exist.length > 0) {
-  return res.status(409).json({ message: `รหัสวิชา ${code} มีอยู่ในระบบแล้ว` });
-}
   try {
+    // 1. ดึงข้อมูลจาก req.body เข้ามาก่อน
     const { code, name_th, name_en, credit, category, description } = req.body;
 
+    // 2. ตรวจสอบว่ากรอกข้อมูลครบถ้วนหรือไม่
     if (!code || !name_th || !name_en || !credit || !category) {
       return res.status(400).json({ message: "กรุณากรอกข้อมูลรายวิชาให้ครบถ้วน" });
     }
 
+    // 3. ตรวจสอบว่ารหัสวิชาซ้ำหรือไม่ (ตอนที่ 21)
+    const [exist] = await pool.query(
+      "SELECT id FROM courses WHERE code = ?",
+      [code]
+    );
+    if (exist.length > 0) {
+      return res.status(409).json({ message: `รหัสวิชา ${code} มีอยู่ในระบบแล้ว` });
+    }
+
+    // 4. บันทึกข้อมูลลงตาราง
     const [result] = await pool.query(
       `INSERT INTO courses (code, name_th, name_en, credit, category, description)
        VALUES (?, ?, ?, ?, ?, ?)`,
@@ -60,6 +68,7 @@ if (exist.length > 0) {
       course: createdRows[0]
     });
   } catch (error) {
+    console.error("Database Insert Error:", error);
     res.status(500).json({ message: "ไม่สามารถเพิ่มข้อมูลรายวิชาได้", error: error.message });
   }
 }
