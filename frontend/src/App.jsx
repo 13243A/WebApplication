@@ -12,24 +12,24 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
-  const [selectedCourseDetail, setSelectedCourseDetail] = useState(null); // ฟังก์ชัน 3: Popup ดูรายละเอียด
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // ฟังก์ชัน 1 & 2 & 4: ตัวกรอง, ค้นหา, และเรียงลำดับ
+  // ฟังก์ชันค้นหา & กรองหมวดหมู่
   const [searchText, setSearchText] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("ALL");
-  const [sortBy, setSortBy] = useState("code_asc"); // code_asc, code_desc, name_asc
 
   const loadCourses = async () => {
     try {
       setLoading(true);
       setMessage({ type: "loading", text: "กำลังโหลดข้อมูลรายวิชา..." });
-
       const data = await getCourses();
       setCourses(data);
       setMessage({ type: "success", text: "โหลดข้อมูลรายวิชาสำเร็จ" });
     } catch (error) {
-      setMessage({ type: "error", text: error.message });
+      setMessage({
+        type: "error",
+        text: "ไม่สามารถเชื่อมต่อ Backend ได้ กรุณาตรวจสอบว่าเซิร์ฟเวอร์กำลังทำงานอยู่"
+      });
     } finally {
       setLoading(false);
     }
@@ -39,14 +39,9 @@ function App() {
     loadCourses();
   }, []);
 
-  useEffect(() => {
-    document.title = `Full Stack Courses: ${courses.length} รายการ`;
-  }, [courses.length]);
-
   const handleSubmitCourse = async (courseData) => {
     try {
       setSubmitting(true);
-
       if (editingCourse) {
         const result = await updateCourse(editingCourse.id, courseData);
         setCourses(
@@ -74,10 +69,6 @@ function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleCancelEdit = () => {
-    setEditingCourse(null);
-  };
-
   const handleDeleteCourse = async (id) => {
     const confirmDelete = window.confirm("ยืนยันการลบข้อมูลรายวิชานี้หรือไม่?");
     if (!confirmDelete) return;
@@ -91,30 +82,19 @@ function App() {
     }
   };
 
-  // ประมวลผลการกรองและเรียงลำดับข้อมูล (Search + Category Filter + Sort)
-  const processedCourses = useMemo(() => {
-    let result = courses.filter((course) => {
+  // คัดกรองข้อมูล
+  const filteredCourses = useMemo(() => {
+    return courses.filter((course) => {
       const keyword = searchText.toLowerCase();
-      const matchesSearch =
+      const matchSearch =
         course.code.toLowerCase().includes(keyword) ||
         course.name_th.toLowerCase().includes(keyword) ||
-        course.name_en.toLowerCase().includes(keyword) ||
-        course.category.toLowerCase().includes(keyword);
-
-      const matchesCategory =
+        course.name_en.toLowerCase().includes(keyword);
+      const matchCat =
         selectedCategory === "ALL" || course.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
+      return matchSearch && matchCat;
     });
-
-    // เรียงลำดับข้อมูล
-    return result.sort((a, b) => {
-      if (sortBy === "code_asc") return a.code.localeCompare(b.code);
-      if (sortBy === "code_desc") return b.code.localeCompare(a.code);
-      if (sortBy === "name_asc") return a.name_th.localeCompare(b.name_th);
-      return 0;
-    });
-  }, [courses, searchText, selectedCategory, sortBy]);
+  }, [courses, searchText, selectedCategory]);
 
   return (
     <div className="app">
@@ -126,12 +106,12 @@ function App() {
             <p>จำนวนทั้งหมด</p>
           </article>
           <article className="summary-card">
-            <h3>{processedCourses.length}</h3>
+            <h3>{filteredCourses.length}</h3>
             <p>ที่แสดงผล</p>
           </article>
           <article className="summary-card">
             <h3>Express</h3>
-            <p>Backend API</p>
+            <p>Backend</p>
           </article>
           <article className="summary-card">
             <h3>MySQL</h3>
@@ -144,15 +124,14 @@ function App() {
         <CourseForm
           onSubmitCourse={handleSubmitCourse}
           editingCourse={editingCourse}
-          onCancelEdit={handleCancelEdit}
+          onCancelEdit={() => setEditingCourse(null)}
           submitting={submitting}
         />
 
-        {/* แผงควบคุม: ค้นหา / ตัวกรองหมวดหมู่ / เรียงลำดับ */}
-        <section className="card filter-section">
+        <section className="card">
           <div className="section-heading">
             <h2>ค้นหาและคัดกรองข้อมูล</h2>
-            <p>ค้นหาตามคำสำคัญ กรองตามหมวดหมู่ หรือจัดเรียงลำดับข้อมูล</p>
+            <p>ค้นหารายวิชาหรือเลือกดูเฉพาะหมวดหมู่ที่ต้องการ</p>
           </div>
           <div className="form-grid">
             <div className="form-group">
@@ -181,45 +160,19 @@ function App() {
                 <option value="Computer Science">Computer Science</option>
               </select>
             </div>
-            <div className="form-group">
-              <label htmlFor="sortBy">เรียงลำดับตาม</label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-              >
-                <option value="code_asc">รหัสวิชา (น้อยไปมาก)</option>
-                <option value="code_desc">รหัสวิชา (มากไปน้อย)</option>
-                <option value="name_asc">ชื่อวิชา (ก-ฮ)</option>
-              </select>
-            </div>
-            <div className="form-group" style={{ display: "flex", alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="secondary"
-                style={{ width: "100%" }}
-                onClick={() => {
-                  setSearchText("");
-                  setSelectedCategory("ALL");
-                  setSortBy("code_asc");
-                }}
-              >
-                รีเซ็ตตัวกรอง
-              </button>
-            </div>
           </div>
         </section>
 
         {loading ? (
-          <div className="status-message loading" style={{ textAlign: "center" }}>
-            <span className="spinner">⏳</span> กำลังโหลดข้อมูลจากเซิร์ฟเวอร์...
+          <div className="card spinner-container">
+            <div className="spinner"></div>
+            <p>กำลังโหลดข้อมูลรายวิชา...</p>
           </div>
         ) : (
           <CourseTable
-            courses={processedCourses}
+            courses={filteredCourses}
             onEditCourse={handleEditCourse}
             onDeleteCourse={handleDeleteCourse}
-            onViewDetail={(course) => setSelectedCourseDetail(course)}
           />
         )}
 
@@ -233,35 +186,6 @@ function App() {
           </button>
         </section>
       </main>
-
-      {/* Modal หน้าต่างดูรายละเอียดรายวิชา */}
-      {selectedCourseDetail && (
-        <div className="modal-overlay" onClick={() => setSelectedCourseDetail(null)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="section-heading">
-              <h2>รายละเอียดรายวิชา</h2>
-              <p>{selectedCourseDetail.code} - {selectedCourseDetail.name_en}</p>
-            </div>
-            <div className="detail-content">
-              <p><strong>ชื่อภาษาไทย:</strong> {selectedCourseDetail.name_th}</p>
-              <p><strong>หน่วยกิต:</strong> {selectedCourseDetail.credit}</p>
-              <p><strong>หมวดหมู่:</strong> {selectedCourseDetail.category}</p>
-              <p><strong>คำอธิบายรายวิชา:</strong></p>
-              <blockquote className="detail-description">
-                {selectedCourseDetail.description || "ไม่มีคำอธิบาย"}
-              </blockquote>
-              <p style={{ fontSize: "13px", color: "var(--gray)", marginTop: "16px" }}>
-                สร้างเมื่อ: {selectedCourseDetail.created_at ? new Date(selectedCourseDetail.created_at).toLocaleString("th-TH") : "-"}<br />
-                อัปเดตล่าสุด: {selectedCourseDetail.updated_at ? new Date(selectedCourseDetail.updated_at).toLocaleString("th-TH") : "-"}
-              </p>
-            </div>
-            <div style={{ textAlign: "right", marginTop: "20px" }}>
-              <button onClick={() => setSelectedCourseDetail(null)}>ปิดหน้าต่าง</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <Footer />
     </div>
   );
