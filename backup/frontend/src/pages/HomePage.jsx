@@ -1,0 +1,141 @@
+import React, { useState, useEffect } from 'react';
+import { getItems } from '../services/api';
+import ItemCard from '../components/ItemCard';
+
+export default function HomePage({ onOpenChat }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [type, setType] = useState('all');
+
+  useEffect(() => {
+    fetchItems();
+  }, [category, status, type]);
+
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+      const res = await getItems({ search, category, status, type });
+      setItems(res.data || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchItems();
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-emerald-800 to-teal-700 rounded-3xl p-6 sm:p-10 text-white mb-8 shadow-sm">
+        <div className="max-w-2xl">
+          <span className="bg-emerald-500/30 text-emerald-100 text-xs font-semibold px-3 py-1 rounded-full border border-emerald-400/30">
+            ระบบศูนย์กลางของมหาวิทยาลัย
+          </span>
+          <h1 className="text-2xl sm:text-4xl font-bold mt-3 leading-tight">
+            ลืมของ หรือ เก็บของได้ในมหาวิทยาลัย?
+          </h1>
+          <p className="text-emerald-100 text-sm mt-2 font-light">
+            UniFind ช่วยให้นักศึกษาและบุคลากรประสานงานส่งคืนของกันได้อย่างปลอดภัย ผ่านระบบแชทส่วนตัวและจุดรับฝากในมหาวิทยาลัย
+          </p>
+        </div>
+      </div>
+
+      {/* Search & Filters */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-8 space-y-4">
+        {/* Search Bar */}
+        <form onSubmit={handleSearchSubmit} className="flex gap-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อสิ่งของ, สถานที่ที่พบ (เช่น หอสมุด, ป้อม รปภ., บัตรนักศึกษา)..."
+            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-emerald-500 focus:bg-white transition"
+          />
+          <button
+            type="submit"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm px-6 py-2.5 rounded-xl transition"
+          >
+            ค้นหา
+          </button>
+        </form>
+
+        {/* Filter Badges */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 text-xs">
+          <span className="text-slate-400 font-medium mr-1">ตัวกรอง:</span>
+          
+          {/* Type Filter */}
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-emerald-500"
+          >
+            <option value="all">ประเภททั้งหมด (แจ้งหาย/พบของ)</option>
+            <option value="found">เฉพาะแจ้งพบของ</option>
+            <option value="lost">เฉพาะแจ้งของหาย</option>
+          </select>
+
+          {/* Category Filter */}
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-emerald-500"
+          >
+            <option value="all">ทุกหมวดหมู่</option>
+            <option value="อุปกรณ์อิเล็กทรอนิกส์">อุปกรณ์อิเล็กทรอนิกส์</option>
+            <option value="อุปกรณ์การเรียน">อุปกรณ์การเรียน</option>
+            <option value="บัตร/เอกสารสำคัญ">บัตร/เอกสารสำคัญ</option>
+            <option value="กระเป๋า/เครื่องแต่งกาย">กระเป๋า/เครื่องแต่งกาย</option>
+            <option value="ของมีค่า/กุญแจ">ของมีค่า/กุญแจ</option>
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-700 focus:outline-none focus:border-emerald-500"
+          >
+            <option value="all">ทุกสถานะ</option>
+            <option value="searching">กำลังตามหา</option>
+            <option value="ready_pickup">รอรับคืน</option>
+            <option value="returned">ส่งคืนสำเร็จแล้ว</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Items Grid */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-slate-900">
+            รายการสิ่งของทั้งหมด ({items.length})
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-20 text-slate-400">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mb-2"></div>
+            <p className="text-sm">กำลังโหลดข้อมูลสิ่งของ...</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
+            <p className="text-base font-medium">ไม่พบรายการสิ่งของที่ตรงกับเงื่อนไข</p>
+            <p className="text-xs mt-1">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {items.map((item) => (
+              <ItemCard key={item.id} item={item} onOpenChat={onOpenChat} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
